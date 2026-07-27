@@ -41,7 +41,21 @@ Melalui API ini, sistem dapat mengelola autentikasi pengguna secara aman, memfas
 - **Update Task:** Memperbarui detail pelacakan atau mengubah status pesanan via ID dengan validasi Enum Schema.
 - **Delete Task:** Menghapus data task pesanan berdasarkan ID.
 
-## 🏗️ 4. Arsitektur Sistem
+## ⚠️ 4. Kekurangan / Batasan Sistem Saat Ini
+
+- Meskipun sistem telah berjalan dengan baik, terdapat beberapa aspek yang masih bisa ditingkatkan:
+
+- Belum Ada Webhook Stripe: Konfirmasi pembayaran saat ini masih bergantung pada respons langsung (synchronous), belum menggunakan Stripe Webhooks untuk menangani event pembayaran asynchronously secara real-time.
+
+- Refresh Token Belum Diterapkan: Sistem autentikasi saat ini hanya mengandalkan satu Access Token JWT tanpa mekanisme Refresh Token untuk rotasi sesi login yang lebih aman.
+
+- Penyimpanan Gambar Produk: Produk saat ini masih menggunakan URL string eksternal dan belum terintegrasi dengan penyedia penyimpanan cloud (seperti Cloudinary atau AWS S3).
+
+- Cachening Layer: Belum menggunakan Caching (seperti Redis) untuk mempercepat query GET katalog produk.
+
+
+
+## 🏗️ 5. Arsitektur Sistem
 
 Aplikasi ini menggunakan pola arsitektur **MVC (Model-View-Controller)** yang memisahkan tanggung jawab kode secara modular:
 
@@ -69,17 +83,6 @@ Aplikasi ini menggunakan pola arsitektur **MVC (Model-View-Controller)** yang me
    |        MONGODB DATABASE        |      |    STRIPE API     |
    | (User, Cart, Product, Task)    |      |  (Gateway Eksternal)
    +--------------------------------+      +-------------------+
-
-⚠️ 5. Kekurangan / Batasan Sistem Saat Ini
-- Meskipun sistem telah berjalan dengan baik, terdapat beberapa aspek yang masih bisa ditingkatkan:
-
-- Belum Ada Webhook Stripe: Konfirmasi pembayaran saat ini masih bergantung pada respons langsung (synchronous), belum menggunakan Stripe Webhooks untuk menangani event pembayaran asynchronously secara real-time.
-
-- Refresh Token Belum Diterapkan: Sistem autentikasi saat ini hanya mengandalkan satu Access Token JWT tanpa mekanisme Refresh Token untuk rotasi sesi login yang lebih aman.
-
-- Penyimpanan Gambar Produk: Produk saat ini masih menggunakan URL string eksternal dan belum terintegrasi dengan penyedia penyimpanan cloud (seperti Cloudinary atau AWS S3).
-
-- Cachening Layer: Belum menggunakan Caching (seperti Redis) untuk mempercepat query GET katalog produk.
 
 
 
