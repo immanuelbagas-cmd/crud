@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## 📄 1. Ringkasan Projek
 
 Projek ini merupakan **E-Commerce Backend API** tingkat menengah (*Medium Difficulty*) yang dibangun untuk menangani seluruh operasi server-side pada aplikasi toko online. 
@@ -90,3 +91,6 @@ Aplikasi ini menggunakan pola arsitektur **MVC (Model-View-Controller)** yang me
 
 
 
+=======
+# crud
+>>>>>>> 0ce9415e8fe8c742d387ee2e9367b9a5c04d7b3c
