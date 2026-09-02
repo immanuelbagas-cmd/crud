@@ -9,6 +9,7 @@ const orderTaskRoutes = require('./routes/orderTaskRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const jamProduksiRoutes =  require('./routes/jamProduksiRoutes') // ISI
 
 dotenv.config();
 connectDB();
@@ -30,6 +31,11 @@ app.use('/api/tasks', orderTaskRoutes);     // CRUD OrderTask (Tracking Pesanan)
 app.use('/api/products', productRoutes);   // Katalog Produk
 app.use('/api/cart', cartRoutes);         // Keranjang Belanja
 app.use('/api/payment', paymentRoutes);   // Pembayaran Stripe API
+app.use('/api/',jamProduksiRoutes); // ISI
+
+
+// Global Error Handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
