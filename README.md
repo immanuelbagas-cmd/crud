@@ -1,3 +1,11 @@
+SELECT id, username, password, LENGTH(username) as len_user, LENGTH(password) as len_pass FROM ms_users;
+
+UPDATE ms_users 
+SET username = TRIM('admin'), 
+    password = TRIM('123456') 
+WHERE id = 1; 
+-- (atau sesuaikan dengan ID user Anda)
+
 const db = require('../config/db'); // Sesuaikan path koneksi database Anda
 
 const login = async (req, res) => {
