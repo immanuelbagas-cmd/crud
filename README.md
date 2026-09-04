@@ -11,6 +11,8 @@ VALUES (
   'Administrator System'
 );
 
+SELECT * FROM ms_users WHERE username = 'admin';
+
 
 -- 1. Tambahkan kolom pendukung jika belum ada
 ALTER TABLE ms_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
