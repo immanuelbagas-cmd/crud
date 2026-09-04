@@ -1,34 +1,28 @@
-const db = require('./config/db');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-async function testConnection() {
-  try {
-    console.log("=== MEMERIKSA KONEKSI DATABASE ===");
-    
-    // 1. Cek query langsung ke ms_users
-    const res = await db.query("SELECT id, username, password FROM ms_users WHERE LOWER(TRIM(username)) = 'admin'");
-    
-    if (res.rows.length === 0) {
-      console.log("❌ USER 'admin' TIDAK DITEMUKAN di database!");
-      console.log("Jalankan SQL ini di pgAdmin: INSERT INTO ms_users (username, password) VALUES ('admin', '123');");
-    } else {
-      const user = res.rows[0];
-      console.log("✅ USER DITEMUKAN!");
-      console.log("ID        :", user.id);
-      console.log("Username  :", `"${user.username}"`);
-      console.log("Password  :", `"${user.password}"`);
-      
-      if (String(user.password).trim() === '123') {
-        console.log("🎉 STATUS: Password COCOK! Sistem Siap Login.");
-      } else {
-        console.log("❌ STATUS: Password di DB BEDA dengan '123'!");
-      }
-    }
-  } catch (err) {
-    console.error("🔥 ERROR DATABASE / KONEKSI GAGAL:", err.message);
-  } process.exit();
-}
+const pool = new Pool({
+  user: process.env.DB_USER || 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'crud-pg', // Sesuaikan nama DB Anda
+  password: process.env.DB_PASSWORD || 'postgres', // Sesuaikan password DB Anda
+  port: process.env.DB_PORT || 5432,
+  connectionTimeoutMillis: 3000, // Beri waktu max 3 detik agar tidak gantung
+});
 
-testConnection();
+// Test koneksi saat server dinyalakan
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ GAGAL KONEK KE POSTGRESQL:', err.message);
+  } else {
+    console.log('✅ BERHASIL TERHUBUNG KE POSTGRESQL!');
+    release();
+  }
+});
+
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+};
 
 
 
