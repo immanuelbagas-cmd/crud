@@ -328,3 +328,33 @@ ALTER TABLE public.ms_produk_foil ADD COLUMN IF NOT EXISTS jenis_foil VARCHAR(25
 
 
 
+const db = require('../config/db');
+
+const login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Cari user berdasarkan username
+    const result = await db.query('SELECT * FROM ms_users WHERE username = $1', [username]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Username tidak ditemukan' });
+    }
+
+    const user = result.rows[0];
+
+    // Cek password langsung tanpa bcrypt
+    if (user.password !== password) {
+      return res.status(401).json({ success: false, message: 'Password salah' });
+    }
+
+    // Jika cocok, buat token/session seperti biasa
+    return res.json({
+      success: true,
+      message: 'Login berhasil',
+      data: { id: user.id, username: user.username, role: user.role }
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
