@@ -1,3 +1,5 @@
+AUTH CONTROLLER
+
 const db = require('../config/db');
 
 const login = async (req, res) => {
@@ -65,7 +67,6 @@ const login = async (req, res) => {
 };
 
 module.exports = { login };
-
 
 LOGIN.HTML
 
