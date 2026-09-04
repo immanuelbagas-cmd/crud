@@ -1,3 +1,114 @@
+AUTH.JS
+
+// Cek status autentikasi untuk halaman dashboard
+function checkAuth() {
+  const user = localStorage.getItem('user');
+  if (!user && window.location.pathname !== '/login.html' && window.location.pathname !== '/') {
+    window.location.href = '/login.html';
+  }
+}
+
+// Fungsi Logout
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/login.html';
+}
+
+// Fungsi Handling Submit Form Login
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+
+  if (!usernameInput || !passwordInput) {
+    alert('Elemen input username/password tidak ditemukan di HTML!');
+    return;
+  }
+
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, password })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert('✅ Login Berhasil!');
+      
+      // Simpan data user / token di localStorage
+      if (result.token) localStorage.setItem('token', result.token);
+      localStorage.setItem('user', JSON.stringify(result.data));
+
+      // Pindah ke dashboard
+      window.location.href = '/dashboard.html';
+    } else {
+      alert('❌ Login Gagal: ' + (result.message || 'Username atau password salah.'));
+    }
+  } catch (err) {
+    console.error('Error Login:', err);
+    alert('Terjadi kesalahan jaringan/server.');
+  }
+}
+
+// Pasang Listener saat DOM siap
+document.addEventListener('DOMContentLoaded', () => {
+  const formLogin = document.getElementById('formLogin') || document.querySelector('form');
+  if (formLogin) {
+    formLogin.addEventListener('submit', handleLogin);
+  }
+});
+
+
+SERVER.JS
+
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+const authRoutes = require('./routes/authRoutes');
+const stokRoutes = require('./routes/stokRoutes');
+const jamProduksiRoutes = require('./routes/jamProduksiRoutes');
+const mesinRoutes = require('./routes/mesinRoutes');
+const ppRoutes = require('./routes/ppRoutes');
+
+const app = express();
+
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/stok', stokRoutes);
+app.use('/api/jam-produksi', jamProduksiRoutes);
+app.use('/api/mesin', mesinRoutes);
+app.use('/api', ppRoutes);
+
+// Root Route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+});
+
+
+
+
 SELECT id, username, password, LENGTH(username) as len_user, LENGTH(password) as len_pass FROM ms_users;
 
 UPDATE ms_users 
