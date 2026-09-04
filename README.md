@@ -1,3 +1,17 @@
+-- 1. Hapus dulu baris admin lama agar bersih dari error constraint
+DELETE FROM ms_users WHERE LOWER(username) = 'admin';
+
+-- 2. Insert ulang data admin dengan Hash '12345678' dan seluruh kolom pendukung
+INSERT INTO ms_users (username, password, role, is_active, nama_lengkap)
+VALUES (
+  'admin', 
+  '$2a$10$wT8BByqUHzs/H.mHj9V.a.4Qp3f0FjU8xG6.b3mE1S4o/o9c6N7', 
+  'admin', 
+  true, 
+  'Administrator System'
+);
+
+
 -- 1. Tambahkan kolom pendukung jika belum ada
 ALTER TABLE ms_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE ms_users ADD COLUMN IF NOT EXISTS nama_lengkap VARCHAR(255) DEFAULT 'Administrator';
