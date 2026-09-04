@@ -1,3 +1,50 @@
+const login = async (req, res) => {
+  try {
+    // Ambil data dari form
+    const { username, password } = req.body; 
+
+    // Debugging: Cetak ke terminal backend untuk melihat apa yang dikirim frontend
+    console.log("Data Login Masuk:", { username, password });
+
+    // Query pencarian user (Gunakan LOWER agar tidak sensitif huruf besar/kecil)
+    const result = await db.query(
+      'SELECT * FROM ms_users WHERE LOWER(username) = LOWER($1)', 
+      [username ? username.trim() : '']
+    );
+
+    if (result.rows.length === 0) {
+      console.log("User tidak ditemukan di DB!");
+      return res.status(401).json({ success: false, message: 'Username tidak ditemukan' });
+    }
+
+    const user = result.rows[0];
+
+    // Debugging: Bandingkan password
+    console.log("Password DB:", user.password);
+    console.log("Password Input:", password);
+
+    // Cek perbandingan string langsung (Plain Text)
+    if (String(user.password).trim() !== String(password).trim()) {
+      console.log("Password Tidak Cocok!");
+      return res.status(401).json({ success: false, message: 'Password salah' });
+    }
+
+    // Login Sukses
+    return res.json({
+      success: true,
+      message: 'Login berhasil',
+      data: { id: user.id, username: user.username }
+    });
+
+  } catch (error) {
+    console.error("Error Login:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+
 -- 1. HAPUS TABEL LAMA JIKA ADA
 DROP TABLE IF EXISTS tr_jam_produksi_detail CASCADE;
 DROP TABLE IF EXISTS tr_jam_produksi CASCADE;
