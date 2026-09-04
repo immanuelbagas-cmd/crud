@@ -1,47 +1,57 @@
+const db = require('../config/db'); // Sesuaikan path koneksi database Anda
+
 const login = async (req, res) => {
   try {
-    // Ambil data dari form
-    const { username, password } = req.body; 
+    const { username, password } = req.body;
 
-    // Debugging: Cetak ke terminal backend untuk melihat apa yang dikirim frontend
-    console.log("Data Login Masuk:", { username, password });
+    console.log("\n--- [DEBUG LOGIN] ---");
+    console.log("Input dari Frontend -> Username:", `"${username}"`, "| Password:", `"${password}"`);
 
-    // Query pencarian user (Gunakan LOWER agar tidak sensitif huruf besar/kecil)
-    const result = await db.query(
-      'SELECT * FROM ms_users WHERE LOWER(username) = LOWER($1)', 
-      [username ? username.trim() : '']
-    );
+    if (!username || !password) {
+      console.log("❌ Input kosong!");
+      return res.status(400).json({ success: false, message: 'Username dan Password wajib diisi!' });
+    }
+
+    // 1. Cari user di database (abaikan huruf besar/kecil & spasi)
+    const queryText = 'SELECT * FROM ms_users WHERE LOWER(TRIM(username)) = LOWER(TRIM($1))';
+    const result = await db.query(queryText, [username]);
 
     if (result.rows.length === 0) {
-      console.log("User tidak ditemukan di DB!");
-      return res.status(401).json({ success: false, message: 'Username tidak ditemukan' });
+      console.log("❌ Username TIDAK DITEMUKAN di database!");
+      return res.status(401).json({ success: false, message: 'Username atau Password salah' });
     }
 
     const user = result.rows[0];
+    console.log("Data dari DB      -> Username:", `"${user.username}"`, "| Password DB:", `"${user.password}"`);
 
-    // Debugging: Bandingkan password
-    console.log("Password DB:", user.password);
-    console.log("Password Input:", password);
+    // 2. Bandingkan Password (Plain Text)
+    const inputPass = String(password).trim();
+    const dbPass = String(user.password).trim();
 
-    // Cek perbandingan string langsung (Plain Text)
-    if (String(user.password).trim() !== String(password).trim()) {
-      console.log("Password Tidak Cocok!");
-      return res.status(401).json({ success: false, message: 'Password salah' });
+    if (inputPass !== dbPass) {
+      console.log("❌ Password TIDAK COCOK!");
+      console.log(`Bandingkan: "${inputPass}" VS "${dbPass}"`);
+      return res.status(401).json({ success: false, message: 'Username atau Password salah' });
     }
 
-    // Login Sukses
+    console.log("✅ LOGIN BERHASIL!");
     return res.json({
       success: true,
       message: 'Login berhasil',
-      data: { id: user.id, username: user.username }
+      data: {
+        id: user.id,
+        username: user.username,
+        role: user.role || 'user'
+      }
     });
 
   } catch (error) {
-    console.error("Error Login:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("🔥 Error Server saat Login:", error);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server: ' + error.message });
   }
 };
 
+module.exports = { login };
 
 
 
