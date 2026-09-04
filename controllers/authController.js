@@ -1,32 +1,64 @@
+const UserModel = require('../models/userModel');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const UserModel = require('../models/userModel');
-const { successResponse, errorResponse } = require('../utils/responseHandler');
-
-exports.login = async (req, res, next) => {
+const login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = await UserModel.findByUsername(username);
 
-    if (!user) return errorResponse(res, "Username atau password salah", 401);
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username dan password wajib diisi'
+      });
+    }
+
+    const user = await UserModel.findByUsername(username);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Username atau password salah'
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return errorResponse(res, "Username atau password salah", 401);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Username atau password salah'
+      });
+    }
 
+    const secretKey = process.env.JWT_SECRET || 'secret_jwt_inds';
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      secretKey,
+      { expiresIn: '24h' }
     );
 
-    return successResponse(res, "Login berhasil", {
-      token,
-      user: { username: user.username, nama: user.nama_lengkap, role: user.role }
+    return res.status(200).json({
+      success: true,
+      message: 'Login berhasil',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          nama: user.nama_lengkap,
+          role: user.role
+        }
+      }
     });
+
   } catch (error) {
-    next(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
+
+module.exports = { login };
+
 
 
 // const User = require('../models/User');

@@ -1,20 +1,33 @@
 const jwt = require('jsonwebtoken');
-const { errorResponse } = require('../utils/responseHandler');
-
-exports.verifyToken = (req, res, next) => {
+const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return errorResponse(res, "Akses ditolak! Token tidak ditemukan.", 401);
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return errorResponse(res, "Token tidak valid atau sudah kadaluarsa.", 403);
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Akses ditolak! Token tidak ditemukan.'
+    });
   }
+
+  const secretKey = process.env.JWT_SECRET || 'secret_jwt_inds';
+
+  jwt.verify(token, secretKey, (err, user) => {
+    if (err) {
+      return res.status(403).json({
+        success: false,
+        message: 'Token tidak valid atau sudah kadaluarsa.'
+      });
+    }
+
+    req.user = user;
+    next();
+  });
 };
+
+module.exports = verifyToken;
+
+
 
 
 // const jwt = require('jsonwebtoken');

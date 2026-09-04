@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/stokBulananController');
-const { verifyToken } = require('../middleware/authMiddleware');
+const stokController = require('../controllers/stokController');
+const verifyToken = require('../middleware/authMiddleware');
 
-router.use(verifyToken);
-router.get('/rekap', controller.getStokPeriode);
-router.post('/closing', controller.prosesClosingBulan);
+// Endpoint dilindungi oleh middleware verifyToken
+router.get('/rekap', verifyToken, stokController.getRekapStok);
 
 module.exports = router;

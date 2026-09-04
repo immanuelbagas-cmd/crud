@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Ids</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; flex-direction: column; min-height: 100vh; }
+    
+    .navbar { background: #1e293b; color: white; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-left { display: flex; align-items: center; gap: 15px; }
+    .hamburger { font-size: 24px; cursor: pointer; background: none; border: none; color: white; }
+
+    .sidebar { position: fixed; top: 0; left: -250px; width: 250px; height: 100%; background: #0f172a; color: white; transition: 0.3s; z-index: 1000; padding-top: 60px; }
+    .sidebar.active { left: 0; }
+    .sidebar-menu { list-style: none; }
+    .sidebar-menu li a { display: block; padding: 15px 20px; color: #cbd5e1; text-decoration: none; border-bottom: 1px solid #1e293b; font-weight: 500; }
+    .sidebar-menu li a:hover, .sidebar-menu li a.active { background: #2563eb; color: white; }
+    
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 999; }
+    .overlay.active { display: block; }
+
+    .content-area { padding: 20px; max-width: 1200px; margin: 0 auto; width: 100%; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background-color: #f8fafc; }
+    .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body onload="checkAuth(); loadProdukOptions(); loadPPData(); loadMesinOptions(); loadStokData(); loadJamProduksiData();">
+
+  <!-- Top Navigation Bar -->
+  <div class="navbar">
+    <div class="nav-left">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <h2>INDOSTAMPING</h2>
+    </div>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Sidebar Hamburger Menu -->
+  <div class="sidebar" id="sidebar">
+    <ul class="sidebar-menu">
+      <li><a href="#" class="menu-link active" onclick="switchTab('tab-alur-po', this)">📋 Alur PO (PP & KK)</a></li>
+      <li><a href="#" class="menu-link" onclick="switchTab('tab-jam-produksi', this)">⚙️ Jam Produksi Mesin</a></li>
+      <li><a href="#" class="menu-link" onclick="switchTab('tab-rekap-stok', this)">📦 Rekap Stok Bulanan</a></li>
+    </ul>
+  </div>
+
+  <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+  <!-- Main Content Area -->
+  <div class="content-area">
+
+    <!-- TAB 1: ALUR PO (PERINTAH PRODUKSI) -->
+    <div id="tab-alur-po" class="tab-content active">
+      <div class="card">
+        <h2>Alur PO: Input Perintah Produksi (PP & KK)</h2>
+        <br>
+        <form id="formPP" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;">
+          
+          <div style="flex: 1; min-width: 180px;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">No. PO SAKTI / SIMPG</label>
+            <input type="text" id="no_po_sakti" required placeholder="Contoh: PO-SAKTI-001" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+          
+          <!-- Dropdown Pilih Foil -->
+          <div style="flex: 1; min-width: 200px;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Pilih Jenis Foil</label>
+            <select id="produk_id" onchange="toggleCustomFoilInput(this.value)" style="width: 100%; padding: 8.5px; border: 1px solid #ccc; border-radius: 4px;">
+              <option value="">-- Memuat Data... --</option>
+            </select>
+          </div>
+
+          <!-- Column Teks Tambahan Jika Menginput Foil Baru/Manual -->
+          <div id="groupFoilBaru" style="flex: 1; min-width: 200px; display: none;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Ketik Jenis Foil Baru</label>
+            <input type="text" id="jenis_foil_baru" placeholder="Contoh: Foil Aluminium 50 micron" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+
+          <div style="flex: 1; min-width: 120px;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Jumlah (Qty)</label>
+            <input type="number" id="qty" required placeholder="Qty Roll" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+
+          <button type="submit" style="background: #0d6efd; color: white; border: none; padding: 9px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; height: 36px;">
+            Generate No PP & Simpan
+          </button>
+        </form>
+
+        <h3>Daftar Perintah Produksi (PP)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>No PP (Auto Generated)</th>
+              <th>No PO SAKTI</th>
+              <th>Jenis Produk Foil</th>
+              <th>Qty</th>
+              <th>Status ACC</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tblPPBody">
+            <tr><td colspan="6" style="text-align: center;">Memuat data PP...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: JAM PRODUKSI MESIN -->
+    <div id="tab-jam-produksi" class="tab-content">
+      <div class="card">
+        <h3>Input Jam Produksi Mesin</h3>
+        <form id="formJamProduksi">
+          <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
+            
+            <div class="form-group" style="flex: 1; min-width: 200px;">
+              <label>Pilih / Tambah Mesin</label>
+              <select id="mesin_id" onchange="toggleNewMachineInput(this.value)" required style="width: 100%; padding: 8px;">
+                <option value="">-- Pilih Mesin --</option>
+                <option value="NEW">+ Tambah Mesin Baru...</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="groupMesinBaru" style="flex: 1; min-width: 200px; display: none;">
+              <label>Nama Mesin Baru</label>
+              <input type="text" id="nama_mesin_baru" placeholder="Contoh: Mesin Extruder B" style="width: 100%; padding: 8px;">
+            </div>
+
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+              <label>Tanggal</label>
+              <input type="date" id="tanggal" required style="width: 100%; padding: 8px;">
+            </div>
+            
+            <div class="form-group" style="flex: 1; min-width: 120px;">
+              <label>Jam Mulai</label>
+              <input type="time" id="jam_mulai" required style="width: 100%; padding: 8px;">
+            </div>
+            
+            <div class="form-group" style="flex: 1; min-width: 120px;">
+              <label>Jam Selesai</label>
+              <input type="time" id="jam_selesai" required style="width: 100%; padding: 8px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px;">
+            <label>Keterangan</label>
+            <input type="text" id="keterangan" placeholder="Catatan operasional" style="width: 100%; padding: 8px;">
+          </div>
+
+          <button type="submit" style="background: #0d6efd; color: white; border: none; padding: 10px 15px; border-radius: 4px; margin-top: 15px; cursor: pointer;">Simpan Jam Produksi</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Riwayat Jam Produksi Mesin</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Mesin</th>
+              <th>Tanggal</th>
+              <th>Mulai</th>
+              <th>Selesai</th>
+              <th>Total Jam</th>
+              <th>Keterangan</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tblJamBody">
+            <tr><td colspan="7">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: REKAP STOK BULANAN -->
+    <div id="tab-rekap-stok" class="tab-content">
+      <div class="card">
+        <h3>Rekap Stok Bulanan</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Kode</th>
+              <th>Nama Barang</th>
+              <th>Gudang</th>
+              <th>Saldo Awal</th>
+              <th>Masuk (Debit)</th>
+              <th>Keluar (Kredit)</th>
+              <th>Saldo Akhir</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tblStokBody">
+            <tr><td colspan="8">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('active');
+      document.getElementById('overlay').classList.toggle('active');
+    }
+
+    function switchTab(tabId, element) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.menu-link').forEach(menu => menu.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      element.classList.add('active');
+
+      toggleSidebar();
+    }
+  </script>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/perintahProduksi.js"></script>
+  <script src="/js/stok.js"></script>
+  <script src="/js/jamProduksi.js"></script>
+</body>
+</html>

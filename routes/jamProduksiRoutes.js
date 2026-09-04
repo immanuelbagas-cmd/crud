@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/jamProduksiController');
-const { verifyToken } = require('../middleware/authMiddleware');
+const jamProduksiController = require('../controllers/jamProduksiController');
+const verifyToken = require('../middleware/authMiddleware');
 
-router.use(verifyToken);
-router.get('/', controller.getAll);
-router.post('/', controller.create);
+router.post('/', verifyToken, jamProduksiController.createJamProduksi);
+router.get('/', verifyToken, jamProduksiController.getJamProduksi);
+// PERBAIKAN: Hapus argumen 'jamProduksiController' yang dobel di bawah ini
+router.delete('/:id', verifyToken, jamProduksiController.deleteJamProduksi);
+router.put('/:id', verifyToken, jamProduksiController.deleteJamProduksi);
 
 module.exports = router;
