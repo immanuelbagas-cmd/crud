@@ -1,28 +1,20 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const db = require('./config/db');
 
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'crud-pg', // Sesuaikan nama DB Anda
-  password: process.env.DB_PASSWORD || 'postgres', // Sesuaikan password DB Anda
-  port: process.env.DB_PORT || 5432,
-  connectionTimeoutMillis: 3000, // Beri waktu max 3 detik agar tidak gantung
-});
+console.log("Menguji koneksi ke PostgreSQL...");
 
-// Test koneksi saat server dinyalakan
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ GAGAL KONEK KE POSTGRESQL:', err.message);
-  } else {
-    console.log('✅ BERHASIL TERHUBUNG KE POSTGRESQL!');
-    release();
-  }
-});
-
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-};
+db.query("SELECT 1 + 1 AS result")
+  .then(res => {
+    console.log("✅ KONEKSI BERHASIL! Database merespons.");
+    return db.query("SELECT id, username, password FROM ms_users WHERE username = 'admin'");
+  })
+  .then(res => {
+    console.log("Data Admin di DB:", res.rows);
+    process.exit(0);
+  })
+  .catch(err => {
+    console.error("❌ ERROR KONEKSI / QUERY:", err.message);
+    process.exit(1);
+  });
 
 
 
