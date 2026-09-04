@@ -1,3 +1,71 @@
+LOGIN.HTML
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>System Informasi Manajemen - PLPP</title>
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f6f9; margin: 0; }
+    .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; }
+    input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Login Page</h2>
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Masuk</button>
+    </form>
+    <p id="errorMsg" style="color:red; font-size:12px; margin-top:10px; text-align:center;"></p>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const usernameInput = document.getElementById('username').value;
+      const passwordInput = document.getElementById('password').value;
+      const errorMsg = document.getElementById('errorMsg');
+
+      errorMsg.innerText = 'Memproses...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            username: usernameInput.trim(), 
+            password: passwordInput.trim() 
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // Simpan status login
+          localStorage.setItem('user', JSON.stringify(data.data || { username: usernameInput }));
+          localStorage.setItem('token', 'internal-session-active'); // Token dummy agar checkAuth() di dashboard lolos
+
+          // Pindah ke dashboard
+          window.location.href = '/dashboard.html';
+        } else {
+          errorMsg.innerText = data.message || 'Username atau Password Salah!';
+        }
+      } catch (err) {
+        console.error('Error Login:', err);
+        errorMsg.innerText = 'Gagal terhubung ke server backend!';
+      }
+    });
+  </script>
+</body>
+</html>
+
+
 AUTH.JS
 
 // Cek status autentikasi untuk halaman dashboard
