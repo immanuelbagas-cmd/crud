@@ -40,3 +40,15 @@ async function fixAdmin() {
 }
 
 fixAdmin();
+
+
+
+-- 1. Tambah kolom nama_lengkap (diperlukan oleh controller)
+ALTER TABLE ms_users ADD COLUMN IF NOT EXISTS nama_lengkap VARCHAR(255);
+
+-- 2. Update data admin dengan nama_lengkap dan hash password '123'
+UPDATE ms_users 
+SET password = '$2a$10$wT8BByqUHzs/H.mHj9V.a.4Qp3f0FjU8xG6.b3mE1S4o/o9c6N7',
+    nama_lengkap = 'Administrator System',
+    is_active = true 
+WHERE username = 'admin';
