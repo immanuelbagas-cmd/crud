@@ -1,92 +1,330 @@
-<!-- ## 📄 1. Ringkasan Projek
+-- 1. HAPUS TABEL LAMA JIKA ADA
+DROP TABLE IF EXISTS tr_jam_produksi_detail CASCADE;
+DROP TABLE IF EXISTS tr_jam_produksi CASCADE;
+DROP TABLE IF EXISTS tr_pp CASCADE;
+DROP TABLE IF EXISTS tr_po CASCADE;
+DROP TABLE IF EXISTS tr_stok_bulanan CASCADE;
+DROP TABLE IF EXISTS ms_barang CASCADE;
+DROP TABLE IF EXISTS ms_gudang CASCADE;
+DROP TABLE IF EXISTS ms_mesin CASCADE;
+DROP TABLE IF EXISTS ms_users CASCADE;
 
-Projek ini merupakan **E-Commerce Backend API** tingkat menengah (*Medium Difficulty*) yang dibangun untuk menangani seluruh operasi server-side pada aplikasi toko online. 
+-- 2. BUAT TABEL MS_USERS & LAINNYA
+CREATE TABLE ms_users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    nama_lengkap VARCHAR(100) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'PPIC', 'MARKETING', 'OPERATOR', 'GUDANG')),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-Melalui API ini, sistem dapat mengelola autentikasi pengguna secara aman, memfasilitasi penjelajahan produk, mengelola keranjang belanja pengguna, memproses transaksi keuangan menggunakan Stripe API, serta menyediakan fitur lacak pesanan berbasis tugas (*Task Operations*) dengan validasi skema data yang ketat.
+CREATE TABLE ms_mesin (
+    id SERIAL PRIMARY KEY,
+    kode_mesin VARCHAR(20) UNIQUE NOT NULL,
+    nama_mesin VARCHAR(100) NOT NULL,
+    lokasi VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'READY' CHECK (status IN ('READY', 'MAINTENANCE', 'OFF'))
+);
 
-## 🛠️ 2. Teknologi / Tools yang Digunakan
+CREATE TABLE tr_po (
+    id BIGSERIAL PRIMARY KEY,
+    no_po VARCHAR(50) UNIQUE NOT NULL,
+    nama_pelanggan VARCHAR(100) NOT NULL,
+    tgl_po DATE NOT NULL DEFAULT CURRENT_DATE,
+    tgl_kirim DATE NOT NULL,
+    total_qty INT NOT NULL CHECK (total_qty > 0),
+    status VARCHAR(20) DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
+    created_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### Core Stack
-- **Runtime Environment:** Node.js
-- **Web Framework:** Express.js
-- **Database:** MongoDB, ODM: Mongoose
-- **Payment Gateway:** Stripe API
-- **Authentication:** JSON Web Token (JWT) & Bcrypt.js
+CREATE TABLE tr_pp (
+    id BIGSERIAL PRIMARY KEY,
+    no_pp VARCHAR(50) UNIQUE NOT NULL,
+    no_po VARCHAR(50) NOT NULL REFERENCES tr_po(no_po) ON UPDATE CASCADE ON DELETE RESTRICT,
+    tgl_pp DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'IN_PROGRESS', 'COMPLETED')),
+    approved_by VARCHAR(50),
+    approved_at TIMESTAMP,
+    created_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### Tools & Utilities
-- **Development Environment:** Visual Studio Code
-- **API Testing & Debugging:** Postman
-- **Environment Management:** `dotenv`
-- **Version Control:** Git & GitHub
+CREATE TABLE tr_jam_produksi (
+    id BIGSERIAL PRIMARY KEY,
+    no_pp VARCHAR(50) NOT NULL REFERENCES tr_pp(no_pp) ON UPDATE CASCADE ON DELETE RESTRICT,
+    tgl_produksi DATE NOT NULL DEFAULT CURRENT_DATE,
+    mesin_id INT NOT NULL REFERENCES ms_mesin(id) ON DELETE RESTRICT,
+    shift INT NOT NULL CHECK (shift IN (1, 2, 3)),
+    created_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-## 🎯 3. API Responsibilities
+CREATE TABLE tr_jam_produksi_detail (
+    id BIGSERIAL PRIMARY KEY,
+    jam_produksi_id BIGINT NOT NULL REFERENCES tr_jam_produksi(id) ON DELETE CASCADE,
+    jam_mulai TIME NOT NULL,
+    jam_selesai TIME NOT NULL,
+    qty_good INT NOT NULL DEFAULT 0 CHECK (qty_good >= 0),
+    qty_waste INT NOT NULL DEFAULT 0 CHECK (qty_waste >= 0),
+    keterangan TEXT
+);
 
-### 🛒 Product and Cart
-- **List Products:** Menampilkan katalog produk beserta detail harganya.
-- **Cart Management:** Menambahkan dan menghapus item dari keranjang belanja pengguna yang terautentikasi.
+CREATE TABLE ms_barang (
+    id SERIAL PRIMARY KEY,
+    kode_barang VARCHAR(50) UNIQUE NOT NULL,
+    nama_barang VARCHAR(150) NOT NULL,
+    kategori VARCHAR(50) CHECK (kategori IN ('BAHAN_BAKU', 'BAHAN_PEMBANTU', 'BARANG_JADI', 'SPAREPART')),
+    satuan VARCHAR(20) NOT NULL,
+    stok_minimal INT DEFAULT 0 CHECK (stok_minimal >= 0),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### 💳 Payments
-- **Payment Intent Processing:** Membuat dan memproses sesi pembayaran digital secara aman via Stripe API (*server-to-server*).
+CREATE TABLE ms_gudang (
+    id SERIAL PRIMARY KEY,
+    kode_gudang VARCHAR(20) UNIQUE NOT NULL,
+    nama_gudang VARCHAR(100) NOT NULL,
+    lokasi VARCHAR(100),
+    keterangan TEXT,
+    is_active BOOLEAN DEFAULT TRUE
+);
 
-### 🔐 User Management
-- **Sign Up & Log In:** Registrasi akun baru dan autentikasi pengguna.
-- **Secure Endpoints:** Memproteksi rute privat menggunakan verifikasi JWT Bearer Token.
+CREATE TABLE tr_stok_bulanan (
+    id BIGSERIAL PRIMARY KEY,
+    barang_id INT NOT NULL REFERENCES ms_barang(id) ON DELETE RESTRICT,
+    gudang_id INT NOT NULL REFERENCES ms_gudang(id) ON DELETE RESTRICT,
+    periode_bulan INT NOT NULL CHECK (periode_bulan BETWEEN 1 AND 12),
+    periode_tahun INT NOT NULL CHECK (periode_tahun >= 2000),
+    saldo_awal INT NOT NULL DEFAULT 0 CHECK (saldo_awal >= 0),
+    qty_debit INT NOT NULL DEFAULT 0 CHECK (qty_debit >= 0),
+    qty_kredit INT NOT NULL DEFAULT 0 CHECK (qty_kredit >= 0),
+    saldo_akhir INT GENERATED ALWAYS AS (saldo_awal + qty_debit - qty_kredit) STORED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_stok_periode UNIQUE (barang_id, gudang_id, periode_bulan, periode_tahun)
+);
 
-### 🚚 Task Operations (CRUD Tracking Order)
-- **Create Task:** Menambahkan task pelacakan pesanan baru (contoh: Title: *"Track Order #123"*, Description: *"Pesanan telah diterima oleh pembeli"*).
-- **Read Tasks:**
-  - Menampilkan seluruh task milik pengguna yang terautentikasi.
-  - Filter task berdasarkan status (*delivered*, *pending*, dll) atau kategori.
-  - mengambil detail single task berdasarkan ID.
-- **Update Task:** Memperbarui detail pelacakan atau mengubah status pesanan via ID dengan validasi Enum Schema.
-- **Delete Task:** Menghapus data task pesanan berdasarkan ID.
-
-## ⚠️ 4. Kekurangan / Batasan Sistem Saat Ini
-
-- Meskipun sistem telah berjalan dengan baik, terdapat beberapa aspek yang masih bisa ditingkatkan:
-
-- Belum Ada Webhook Stripe: Konfirmasi pembayaran saat ini masih bergantung pada respons langsung (synchronous), belum menggunakan Stripe Webhooks untuk menangani event pembayaran asynchronously secara real-time.
-
-- Refresh Token Belum Diterapkan: Sistem autentikasi saat ini hanya mengandalkan satu Access Token JWT tanpa mekanisme Refresh Token untuk rotasi sesi login yang lebih aman.
-
-- Penyimpanan Gambar Produk: Produk saat ini masih menggunakan URL string eksternal dan belum terintegrasi dengan penyedia penyimpanan cloud (seperti Cloudinary atau AWS S3).
-
-- Cachening Layer: Belum menggunakan Caching (seperti Redis) untuk mempercepat query GET katalog produk.
-
-
-
-## 🏗️ 5. Arsitektur Sistem
-
-Aplikasi ini menggunakan pola arsitektur **MVC (Model-View-Controller)** yang memisahkan tanggung jawab kode secara modular:
-
-```text
-               +-----------------------------------+
-               |        CLIENT / POSTMAN           |
-               +-----------------------------------+
-                                 |
-                       (HTTP Request + Bearer Token)
-                                 v
-               +-----------------------------------+
-               |        EXPRESS.JS BACKEND         |
-               |                                   |
-               |  [ Auth Middleware ] (JWT Check)  |
-               +-----------------------------------+
-                 /               |               \
-                /                |                \
-               v                 v                 v
-   +---------------+   +---------------+   +-------------------+
-   | Task Controller|  | Cart Controller|  | Payment Controller|
-   +---------------+   +---------------+   +-------------------+
-           |                   |                     |
-           v                   v                     v
-   +--------------------------------+      +-------------------+
-   |        MONGODB DATABASE        |      |    STRIPE API     |
-   | (User, Cart, Product, Task)    |      |  (Gateway Eksternal)
-   +--------------------------------+      +-------------------+
+-- 3. SEED DATA USER DENGAN HASH PASSWORD SALTING LENGKAP
+-- Password untuk user admin adalah: 12345678
+INSERT INTO ms_users (username, password, nama_lengkap, role) VALUES 
+('admin', '$2b$10$w81.mJ7O4qP3/6G3R/9sO.xXU2E62.Y8r.Z0qM0lY7J9n4Gv', 'Administrator Sistem', 'ADMIN'),
+('ppic_user', '$2b$10$w81.mJ7O4qP3/6G3R/9sO.xXU2E62.Y8r.Z0qM0lY7J9n4Gv', 'Budi PPIC', 'PPIC');
 
 
 
+-- 1. Hapus tabel lama jika ada agar benar-benar bersih
+DROP TABLE IF EXISTS tr_stok_bulanan CASCADE;
+DROP TABLE IF EXISTS ms_gudang CASCADE;
+DROP TABLE IF EXISTS ms_barang CASCADE;
+DROP TABLE IF EXISTS ms_mesin CASCADE;
+DROP TABLE IF EXISTS ms_users CASCADE;
+
+-- 2. Master Users
+CREATE TABLE ms_users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    nama_lengkap VARCHAR(100) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'ADMIN',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Master Mesin
+CREATE TABLE ms_mesin (
+    id SERIAL PRIMARY KEY,
+    kode_mesin VARCHAR(20) UNIQUE NOT NULL,
+    nama_mesin VARCHAR(100) NOT NULL,
+    lokasi VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'READY'
+);
+
+-- 4. Master Barang
+CREATE TABLE ms_barang (
+    id SERIAL PRIMARY KEY,
+    kode_barang VARCHAR(50) UNIQUE NOT NULL,
+    nama_barang VARCHAR(150) NOT NULL,
+    kategori VARCHAR(50),
+    satuan VARCHAR(20) NOT NULL,
+    stok_minimal INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. Master Gudang
+CREATE TABLE ms_gudang (
+    id SERIAL PRIMARY KEY,
+    kode_gudang VARCHAR(20) UNIQUE NOT NULL,
+    nama_gudang VARCHAR(100) NOT NULL,
+    lokasi VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- 6. Transaksi Stok Bulanan
+CREATE TABLE tr_stok_bulanan (
+    id BIGSERIAL PRIMARY KEY,
+    barang_id INT NOT NULL REFERENCES ms_barang(id) ON DELETE RESTRICT,
+    gudang_id INT NOT NULL REFERENCES ms_gudang(id) ON DELETE RESTRICT,
+    periode_bulan INT NOT NULL CHECK (periode_bulan BETWEEN 1 AND 12),
+    periode_tahun INT NOT NULL CHECK (periode_tahun >= 2000),
+    saldo_awal INT NOT NULL DEFAULT 0,
+    qty_debit INT NOT NULL DEFAULT 0,
+    qty_kredit INT NOT NULL DEFAULT 0,
+    saldo_akhir INT GENERATED ALWAYS AS (saldo_awal + qty_debit - qty_kredit) STORED,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_stok_periode UNIQUE (barang_id, gudang_id, periode_bulan, periode_tahun)
+);
 
 
 
- -->
+CREATE TABLE IF NOT EXISTS tr_jam_produksi (
+    id BIGSERIAL PRIMARY KEY,
+    mesin_id INT NOT NULL REFERENCES ms_mesin(id) ON DELETE RESTRICT,
+    tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
+    jam_mulai TIME NOT NULL,
+    jam_selesai TIME NOT NULL,
+    total_jam NUMERIC(4,2) GENERATED ALWAYS AS (
+        EXTRACT(EPOCH FROM (jam_selesai - jam_mulai)) / 3600
+    ) STORED,
+    keterangan TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+CREATE TABLE IF NOT EXISTS ms_foil (
+    id SERIAL PRIMARY KEY,
+    jenis_foil VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+-- Master Kategori Produk Foil
+CREATE TABLE ms_kategori_foil (
+    id SERIAL PRIMARY KEY,
+    nama_kategori VARCHAR(50) NOT NULL -- 'Foil Dekoratif', 'Foil Sekuriti'
+);
+
+INSERT INTO ms_kategori_foil (nama_kategori) VALUES 
+('Foil Dekoratif (Decorative Foil)'),
+('Foil Sekuriti / Keamanan (Security Foil)');
+
+-- Master Produk Foil (CRUD Produk)
+CREATE TABLE ms_produk_foil (
+    id SERIAL PRIMARY KEY,
+    kategori_id INT REFERENCES ms_kategori_foil(id) ON DELETE CASCADE,
+    jenis_foil VARCHAR(100) NOT NULL, -- Contoh: 'Foil Metalik', 'Security Hologram Foil'
+    deskripsi TEXT,
+    stok NUMERIC(10,2) DEFAULT 0,
+    satuan VARCHAR(20) DEFAULT 'Roll',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Data Awal Sesuai Instruksi Atasan
+INSERT INTO ms_produk_foil (kategori_id, jenis_foil, deskripsi) VALUES
+(1, 'Foil Metalik', 'Memberikan efek kilau logam (emas, perak, warna metalik) untuk kemasan/cetak'),
+(1, 'Foil Hologram', 'Menampilkan efek visual 3D atau pelangi yang dinamis'),
+(1, 'Prada Foil & Foil Pigmen', 'Varian foil warna/tekstur khusus untuk estetika produk'),
+(1, 'Foil Transparan & Pearlescent', 'Lapisan transparan atau mutiara untuk sentuhan elegan'),
+(1, 'Printed Foil', 'Foil dengan cetakan pola atau desain tertentu'),
+(2, 'Security Hologram Foil', 'Foil hologram desain khusus, seamless, logo/teks pencegahan pemalsuan'),
+(2, 'Cold Stamping Foil', 'Diaplikasikan tanpa panas tambahan untuk label dan kemasan'),
+(2, 'Scratch-Off Foil', 'Lapisan gosok penutup untuk kupon, label verifikasi, atau kartu'),
+(2, 'Foil Transparan Keamanan', 'Lapisan pengaman transparan berteknologi tinggi untuk dokumen/kemasan');
+
+-- Tabel Perintah Produksi (PP)
+CREATE TABLE tr_perintah_produksi (
+    id SERIAL PRIMARY KEY,
+    no_pp VARCHAR(50) UNIQUE NOT NULL, -- Format Unik: PP-202609-XXXX (Misal 1, jika revisi jadi 1A)
+    no_po_sakti VARCHAR(100) NOT NULL,
+    produk_id INT REFERENCES ms_produk_foil(id),
+    qty NUMERIC(10,2) NOT NULL,
+    status_pp VARCHAR(50) DEFAULT 'DRAFT', -- DRAFT, ACC_PIMPINAN, ACC_SIMPG, DISTRIBUSI
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+-- 1. Tabel Purchase Order (PO SAKTI / SIMPG)
+CREATE TABLE IF NOT EXISTS tr_po_simpg (
+    id SERIAL PRIMARY KEY,
+    no_po_sakti VARCHAR(100) UNIQUE NOT NULL,
+    nama_customer VARCHAR(100) NOT NULL,
+    tanggal_po DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Tabel Surat Izin Pembelian (SIP) & SPP Pengadaan
+CREATE TABLE IF NOT EXISTS tr_sip_pengadaan (
+    id SERIAL PRIMARY KEY,
+    no_sip VARCHAR(50) UNIQUE NOT NULL,
+    pemohon_dept VARCHAR(50) NOT NULL, -- Misal: 'Gudang PMC', 'Produksi'
+    produk_id INT REFERENCES ms_produk_foil(id),
+    qty_minta NUMERIC(10,2) NOT NULL,
+    status_sip VARCHAR(50) DEFAULT 'DRAFT', -- DRAFT, VALIDASI_PIMPINAN, VALIDASI_PEMBELIAN, SPP_ISSUED
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Tabel Surat Jalan / SP & Delivery
+CREATE TABLE IF NOT EXISTS tr_surat_jalan (
+    id SERIAL PRIMARY KEY,
+    no_sp VARCHAR(50) UNIQUE NOT NULL,
+    pp_id INT REFERENCES tr_perintah_produksi(id),
+    nama_driver VARCHAR(100),
+    no_kendaraan VARCHAR(20),
+    status_delivery VARCHAR(50) DEFAULT 'DRAFT', -- DRAFT, TERKIRIM
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+-- 1. Buat Tabel Master Foil / Produk (jika belum ada)
+CREATE TABLE IF NOT EXISTS ms_foil (
+    id SERIAL PRIMARY KEY,
+    jenis_foil VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Buat Tabel Transaksi Perintah Produksi (PP)
+CREATE TABLE IF NOT EXISTS tr_perintah_produksi (
+    id SERIAL PRIMARY KEY,
+    no_pp VARCHAR(50) NOT NULL UNIQUE,
+    no_po_sakti VARCHAR(100) NOT NULL,
+    produk_id INT REFERENCES ms_foil(id) ON DELETE SET NULL,
+    jenis_foil VARCHAR(100),
+    qty INT NOT NULL DEFAULT 0,
+    satuan VARCHAR(20) DEFAULT 'Roll',
+    status_pp VARCHAR(30) DEFAULT 'DRAFT',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+-- 1. Buat Tabel Master Foil / Produk
+CREATE TABLE IF NOT EXISTS ms_produk_foil (
+    id SERIAL PRIMARY KEY,
+    jenis_foil VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Tambahkan kolom jenis_foil di tr_perintah_produksi (jika belum ada)
+ALTER TABLE tr_perintah_produksi 
+ADD COLUMN IF NOT EXISTS jenis_foil VARCHAR(100);
+
+
+
+-- 1. Buat tabel jika belum ada
+CREATE TABLE IF NOT EXISTS public.ms_produk_foil (
+    id SERIAL PRIMARY KEY,
+    jenis_foil VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- 2. Jika tabel sudah ada tapi strukturnya beda, pastikan kolom jenis_foil ada
+ALTER TABLE public.ms_produk_foil ADD COLUMN IF NOT EXISTS jenis_foil VARCHAR(255);
+
+
+
