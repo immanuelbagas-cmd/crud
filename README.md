@@ -1,39 +1,34 @@
-TEST DB
+-- 1. Buat Tabel Users
+CREATE TABLE ms_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'admin'
+);
 
-const pool = require('./config/db');
+-- 2. Buat Tabel Produk Foil
+CREATE TABLE ms_produk_foil (
+    id SERIAL PRIMARY KEY,
+    jenis_foil VARCHAR(100) NOT NULL,
+    ketebalan NUMERIC(10,2),
+    lebar NUMERIC(10,2),
+    panjang NUMERIC(10,2)
+);
 
-async function test() {
-  console.log("1. Memulai tes koneksi ke PostgreSQL...");
-  try {
-    const res = await pool.query("SELECT id, username, password FROM ms_users WHERE LOWER(username) = 'admin'");
-    console.log("2. ✅ KONEKSI BERHASIL!");
-    console.log("3. Data User Admin:", res.rows);
-  } catch (err) {
-    console.log("2. ❌ GAGAL KONEK KE DB!");
-    console.error("Detail Error:", err.message);
-  } finally {
-    await pool.end(); // Tutup koneksi agar terminal tidak gantung
-    console.log("4. Tes Selesai.");
-  }
-}
+-- 3. Buat Tabel Tr Perintah Produksi (dengan Foreign Key sesuai ERD)
+CREATE TABLE tr_perintah_produksi (
+    id SERIAL PRIMARY KEY,
+    no_pp VARCHAR(50) NOT NULL UNIQUE,
+    tanggal_pp DATE DEFAULT CURRENT_DATE,
+    id_produk INT REFERENCES ms_produk_foil(id) ON DELETE CASCADE,
+    jumlah_roll INT DEFAULT 1,
+    id_user INT REFERENCES ms_users(id) ON DELETE SET NULL,
+    status VARCHAR(50) DEFAULT 'Draft'
+);
 
-test();
-
-CONFIG DB
-
-const { Pool } = require('pg');
-require('dotenv').config();
-
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'crud-pg',
-  password: process.env.DB_PASSWORD || 'postgres', // Pastikan password PG Anda benar di sini
-  port: process.env.DB_PORT || 5432,
-  connectionTimeoutMillis: 3000, // Maksimal tunggu 3 detik agar tidak gantung
-});
-
-module.exports = pool;
+-- 4. INSERT DATA SEEDER UNTUK USER LOGIN PERTAMA (Plain Text)
+INSERT INTO ms_users (username, password, role) 
+VALUES ('admin', '123', 'admin');
 
 
 
