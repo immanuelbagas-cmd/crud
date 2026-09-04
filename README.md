@@ -1,3 +1,37 @@
+const db = require('./config/db');
+
+async function testConnection() {
+  try {
+    console.log("=== MEMERIKSA KONEKSI DATABASE ===");
+    
+    // 1. Cek query langsung ke ms_users
+    const res = await db.query("SELECT id, username, password FROM ms_users WHERE LOWER(TRIM(username)) = 'admin'");
+    
+    if (res.rows.length === 0) {
+      console.log("❌ USER 'admin' TIDAK DITEMUKAN di database!");
+      console.log("Jalankan SQL ini di pgAdmin: INSERT INTO ms_users (username, password) VALUES ('admin', '123');");
+    } else {
+      const user = res.rows[0];
+      console.log("✅ USER DITEMUKAN!");
+      console.log("ID        :", user.id);
+      console.log("Username  :", `"${user.username}"`);
+      console.log("Password  :", `"${user.password}"`);
+      
+      if (String(user.password).trim() === '123') {
+        console.log("🎉 STATUS: Password COCOK! Sistem Siap Login.");
+      } else {
+        console.log("❌ STATUS: Password di DB BEDA dengan '123'!");
+      }
+    }
+  } catch (err) {
+    console.error("🔥 ERROR DATABASE / KONEKSI GAGAL:", err.message);
+  } process.exit();
+}
+
+testConnection();
+
+
+
 AUTHROUTES
 
 const express = require('express');
