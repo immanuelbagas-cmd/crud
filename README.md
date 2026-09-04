@@ -1,3 +1,72 @@
+const db = require('../config/db');
+
+const login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Log ke terminal backend untuk memastikan data dari frontend masuk
+    console.log("--> Request Login Masuk:", { username, password });
+
+    if (!username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Username dan password wajib diisi!' 
+      });
+    }
+
+    // Query pencarian user (Abaikan huruf besar/kecil & spasi)
+    const result = await db.query(
+      'SELECT * FROM ms_users WHERE LOWER(TRIM(username)) = LOWER(TRIM($1))', 
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      console.log("--> Result: Username TIDAK DITEMUKAN di DB");
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Username tidak terdaftar!' 
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Cek Perbandingan Plain-Text (Abaikan spasi)
+    const dbPassword = String(user.password).trim();
+    const inputPassword = String(password).trim();
+
+    if (dbPassword !== inputPassword) {
+      console.log(`--> Result: Password SALAH. DB: "${dbPassword}" VS Input: "${inputPassword}"`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Password salah!' 
+      });
+    }
+
+    console.log("--> Result: LOGIN BERHASIL!");
+
+    // Respon Sukses
+    return res.json({
+      success: true,
+      message: 'Login Berhasil',
+      data: {
+        id: user.id,
+        username: user.username,
+        role: user.role || 'admin'
+      }
+    });
+
+  } catch (error) {
+    console.error("--> Error Server Login:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Terjadi kesalahan pada server database.' 
+    });
+  }
+};
+
+module.exports = { login };
+
+
 LOGIN.HTML
 
 <!DOCTYPE html>
